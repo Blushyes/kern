@@ -1,0 +1,31 @@
+{
+  "name": "create-vite-vue3-chrome-extension-v3",
+  "version": "1.0.0",
+  "description": "A CLI tool to create Chrome extensions with Vite and Vue 3",
+  "main": "bin/cli.js",
+  "type": "module",
+  "bin": {
+    "create-vite-vue3-chrome-extension-v3": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "chrome-extension",
+    "vite",
+    "vue3",
+    "cli"
+  ],
+  "author": "Blushyes",
+  "license": "ISC",
+  "packageManager": "pnpm@10.8.0",
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "fs-extra": "^11.3.0",
+    "globby": "^14.0.1",
+    "inquirer": "^12.5.2"
+  },
+  "devDependencies": {}
+}

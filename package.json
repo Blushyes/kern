@@ -1,6 +1,6 @@
 {
   "name": "create-kern",
-  "version": "1.0.0",
+  "version": "0.0.1-beta",
   "description": "Modular project scaffolding powered by Git repository configs - customize templates, pick features, and spin up projects in seconds.",
   "main": "bin/cli.js",
   "type": "module",

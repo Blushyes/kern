@@ -2,13 +2,15 @@
   "name": "create-kern",
   "version": "0.0.1-beta",
   "description": "Modular project scaffolding powered by Git repository configs - customize templates, pick features, and spin up projects in seconds.",
-  "main": "bin/cli.js",
+  "main": "dist/bin/cli.js",
   "type": "module",
   "bin": {
-    "create-kern": "./bin/cli.js"
+    "create-kern": "./dist/bin/cli.js"
   },
   "scripts": {
-    "start": "node bin/cli.js"
+    "start": "node dist/bin/cli.js",
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "keywords": [
     "chrome-extension",
@@ -26,5 +28,10 @@
     "globby": "^14.0.1",
     "inquirer": "^12.5.2"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3"
+  }
 }

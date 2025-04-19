@@ -1,17 +1,20 @@
 import fs from 'fs-extra';
-import path from 'path';
-import { execSync } from 'child_process';
+import path from 'node:path';
+import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { applyTemplateConfig } from './features.js';
+
+interface CloneOptions {
+  branch?: string;
+}
 
 /**
  * Clones a template repository to a temporary directory.
- * @param {string} repoUrl - The Git repository URL for the template.
- * @param {string} tempDir - The temporary directory path.
- * @param {Object} options - Additional options (e.g., branch).
- * @returns {Promise<void>}
+ * @param repoUrl - The Git repository URL for the template.
+ * @param tempDir - The temporary directory path.
+ * @param options - Additional options (e.g., branch).
+ * @returns Promise<void>
  */
-export async function cloneTemplate(repoUrl, tempDir, options = {}) {
+export async function cloneTemplate(repoUrl: string, tempDir: string, options: CloneOptions = {}): Promise<void> {
   const branch = options.branch || 'master'; 
   
   console.log(chalk.blue(`Cloning template from ${repoUrl} (branch: ${branch})...`));
@@ -41,7 +44,7 @@ export async function cloneTemplate(repoUrl, tempDir, options = {}) {
         
     console.log(chalk.green(`✔ Template successfully cloned to ${tempDir}`));
   } catch (err) {
-    console.error(chalk.red(`Clone template failed: ${err.stderr ? err.stderr.toString() : err.message}`));
+    console.error(chalk.red(`Clone template failed: ${(err as any).stderr ? (err as any).stderr.toString() : (err as Error).message}`));
     // Clean up temporary directory on failure
     if (await fs.pathExists(tempDir)) {
       await fs.remove(tempDir);
@@ -53,11 +56,11 @@ export async function cloneTemplate(repoUrl, tempDir, options = {}) {
 
 /**
  * Copies contents from the temporary directory to the final target directory.
- * @param {string} tempDir - The source temporary directory.
- * @param {string} targetDir - The destination target directory.
- * @returns {Promise<void>}
+ * @param tempDir - The source temporary directory.
+ * @param targetDir - The destination target directory.
+ * @returns Promise<void>
  */
-export async function copyFromTempToTarget(tempDir, targetDir) {
+export async function copyFromTempToTarget(tempDir: string, targetDir: string): Promise<void> {
     console.log(chalk.blue(`Copying files from ${tempDir} to ${targetDir}...`));
     try {
         // Ensure target directory exists
@@ -72,7 +75,7 @@ export async function copyFromTempToTarget(tempDir, targetDir) {
 
         console.log(chalk.green(`✔ Files copied successfully to ${targetDir}`));
     } catch (err) {
-        console.error(chalk.red(`Error copying files from temp to target directory: ${err.message}`));
+        console.error(chalk.red(`Error copying files from temp to target directory: ${(err as Error).message}`));
         throw err;
     }
 }

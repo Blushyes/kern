@@ -1,8 +1,8 @@
-import path from 'path';
+import path from 'node:path';
 import fs from 'fs-extra';
 import chalk from 'chalk';
-import { fileURLToPath } from 'url';
-import os from 'os';
+import { fileURLToPath } from 'node:url';
+import os from 'node:os';
 
 import { confirmProceed, promptOptions, promptTemplateUrl } from '../utils/prompts.js';
 import { cloneTemplate, copyFromTempToTarget } from '../utils/template.js';
@@ -14,12 +14,16 @@ const __dirname = path.dirname(__filename);
 
 /**
  * Initialize a new project based on a user-provided template
- * @param {string} targetDir - Target directory
- * @param {Object} predefinedChoices - Predefined user choices (for testing)
- * @param {string} predefinedRepoUrl - Predefined repository URL (for testing)
- * @returns {Promise<void>}
+ * @param targetDir - Target directory
+ * @param predefinedChoices - Predefined user choices (for testing)
+ * @param predefinedRepoUrl - Predefined repository URL (for testing)
+ * @returns Promise<void>
  */
-export async function init(targetDir, predefinedChoices = null, predefinedRepoUrl = null) {
+export async function init(
+  targetDir: string, 
+  predefinedChoices: Record<string, any> | null = null, 
+  predefinedRepoUrl: string | null = null
+): Promise<void> {
   console.log(chalk.blue('Initializing project...'));
   let tempDir = ''; 
 
@@ -72,11 +76,12 @@ export async function init(targetDir, predefinedChoices = null, predefinedRepoUr
       `  3. pnpm dev (or npm run dev / yarn dev)\n`
     ));
 
-  } catch (err) {
-    console.error(chalk.red(`\n❌ Error during initialization: ${err.message}`));
+  } catch (err: unknown) {
+    const error = err as Error;
+    console.error(chalk.red(`\n❌ Error during initialization: ${error.message}`));
     // Ensure stack trace is printed for debugging
-    if (err.stack) {
-      console.error(chalk.gray(err.stack));
+    if (error.stack) {
+      console.error(chalk.gray(error.stack));
     }
     process.exit(1);
   } finally {
@@ -85,8 +90,9 @@ export async function init(targetDir, predefinedChoices = null, predefinedRepoUr
       try {
         await fs.remove(tempDir);
         console.log(chalk.gray(`Cleaned up temporary directory: ${tempDir}`));
-      } catch (cleanupErr) {
-        console.warn(chalk.yellow(`Warning: Failed to clean up temporary directory ${tempDir}: ${cleanupErr.message}`));
+      } catch (cleanupErr: unknown) {
+        const error = cleanupErr as Error;
+        console.warn(chalk.yellow(`Warning: Failed to clean up temporary directory ${tempDir}: ${error.message}`));
       }
     }
   }

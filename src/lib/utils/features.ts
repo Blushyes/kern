@@ -1,14 +1,56 @@
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'node:path';
 import chalk from 'chalk';
+
+interface Dependency {
+  name: string;
+  version?: string;
+  dev?: boolean;
+}
+
+interface CodePattern {
+  file: string;
+  marker: string;
+  content?: string;
+  replace?: boolean;
+  action?: string;
+  pattern?: string;
+}
+
+interface ManifestKey {
+  path: string;
+  value?: any;
+}
+
+interface TemplateItemConfig {
+  name: string;
+  description?: string;
+  defaultEnabled?: boolean;
+  files?: string[];
+  directories?: string[];
+  dependencies?: Dependency[];
+  manifestKeys?: string[];
+  codePatterns?: CodePattern[];
+  [key: string]: any;
+}
+
+interface TemplateConfig {
+  templateName?: string;
+  templateType?: string;
+  [layerKey: string]: Record<string, TemplateItemConfig> | any;
+}
+
+interface UserSelections {
+  [layerKey: string]: string[];
+}
 
 /**
  * Load the template configuration file from the project directory
- * @param {string} projectDir - Project directory path
- * @returns {Promise<Object>} Template configuration object
+ * @param projectDir - Project directory path
+ * @returns Promise<TemplateConfig> Template configuration object
  * @throws {Error} If template.config.json is not found
  */
-export async function loadTemplateConfig(projectDir) {
+export async function loadTemplateConfig(projectDir: string): Promise<TemplateConfig> {
   try {
     const configPath = path.join(projectDir, 'template.config.json');
 
@@ -24,19 +66,23 @@ export async function loadTemplateConfig(projectDir) {
     }
   } catch (err) {
     // Log the specific error and re-throw to halt execution
-    console.error(chalk.red(`Error loading or validating template configuration: ${err.message}`));
+    console.error(chalk.red(`Error loading or validating template configuration: ${(err as Error).message}`));
     throw err;
   }
 }
 
 /**
  * Apply template configuration based on user choices across multiple layers.
- * @param {string} projectDir - Project directory path
- * @param {Object} userSelections - User choices per layer (e.g., { pages: ['popup'], features: ['pinia'] }).
- * @param {Object} templateConfig - The pre-loaded template configuration object.
- * @returns {Promise<void>}
+ * @param projectDir - Project directory path
+ * @param userSelections - User choices per layer (e.g., { pages: ['popup'], features: ['pinia'] }).
+ * @param templateConfig - The pre-loaded template configuration object.
+ * @returns Promise<void>
  */
-export async function applyTemplateConfig(projectDir, userSelections, templateConfig) {
+export async function applyTemplateConfig(
+  projectDir: string, 
+  userSelections: UserSelections, 
+  templateConfig: TemplateConfig
+): Promise<void> {
   console.log(chalk.blue(`\nApplying template configuration based on selections...`));
 
   // --- 1. Process removals based on unselected items per layer --- 
@@ -44,7 +90,7 @@ export async function applyTemplateConfig(projectDir, userSelections, templateCo
   for (const layerKey in templateConfig) {
     // Ensure the key represents a configurable layer (an object)
     if (typeof templateConfig[layerKey] === 'object' && templateConfig[layerKey] !== null && !Array.isArray(templateConfig[layerKey])) {
-      const layerItems = templateConfig[layerKey];
+      const layerItems = templateConfig[layerKey] as Record<string, TemplateItemConfig>;
       const selectedInLayer = userSelections[layerKey] || []; // Get user selections for this layer
 
       console.log(chalk.gray(`Processing layer: ${layerKey}, Selected: [${selectedInLayer.join(', ')}]`));
@@ -107,11 +153,11 @@ export async function applyTemplateConfig(projectDir, userSelections, templateCo
  * Remove files or directories by pattern.
  * Handles specific files and directory patterns.
  * Example patterns: "src/locales", "src/components/MyComp.vue", "src/assets"
- * @param {string} projectDir - Project directory path
- * @param {string} itemPattern - File or directory pattern to remove
- * @returns {Promise<void>}
+ * @param projectDir - Project directory path
+ * @param itemPattern - File or directory pattern to remove
+ * @returns Promise<void>
  */
-async function removeFiles(projectDir, itemPattern) {
+async function removeFiles(projectDir: string, itemPattern: string): Promise<void> {
   // Normalize pattern: remove trailing slashes and /**/* patterns for path.join
   // Treat /**/* or /**/ at the end as targeting the directory itself for removal.
   const isDirectoryPattern = itemPattern.endsWith('/**/') || itemPattern.endsWith('/**/*');
@@ -141,18 +187,22 @@ async function removeFiles(projectDir, itemPattern) {
       console.log(chalk.yellow(`  Item not found, skipping removal: ${itemPattern} (at ${fullPath})`));
     }
   } catch (err) {
-    console.warn(chalk.yellow(`  Error removing ${itemPattern}: ${err.message}`));
+    console.warn(chalk.yellow(`  Error removing ${itemPattern}: ${(err as Error).message}`));
   }
 }
 
 /**
  * Update package dependencies based on all selected items across layers.
- * @param {string} projectDir - Project directory path
- * @param {Object} templateConfig - The template configuration object.
- * @param {Object} userSelections - User selections per layer (e.g., { pages: ['popup'], features: ['pinia'] }).
- * @returns {Promise<void>}
+ * @param projectDir - Project directory path
+ * @param templateConfig - The template configuration object.
+ * @param userSelections - User selections per layer (e.g., { pages: ['popup'], features: ['pinia'] }).
+ * @returns Promise<void>
  */
-async function updateDependencies(projectDir, templateConfig, userSelections) {
+async function updateDependencies(
+  projectDir: string, 
+  templateConfig: TemplateConfig, 
+  userSelections: UserSelections
+): Promise<void> {
   console.log(chalk.cyan('Updating package dependencies based on selections...'));
   const pkgPath = path.join(projectDir, 'package.json');
 
@@ -169,8 +219,8 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
     if (!pkg.devDependencies) pkg.devDependencies = {};
     
     // Get all required dependencies based on selected items
-    const requiredDeps = new Set();
-    const requiredDevDeps = new Set();
+    const requiredDeps = new Set<string>();
+    const requiredDevDeps = new Set<string>();
     
     // Define core dependencies (adjust as needed, could also be in config)
     // These will always be kept regardless of selections
@@ -184,7 +234,7 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
     // Collect required dependencies from selected items
     for (const layerKey in userSelections) {
       const selectedItems = userSelections[layerKey] || [];
-      const layerConfig = templateConfig[layerKey]; // Get config for this layer
+      const layerConfig = templateConfig[layerKey] as Record<string, TemplateItemConfig>; // Get config for this layer
 
       if (!layerConfig) continue; // Skip if layer doesn't exist in config
 
@@ -204,8 +254,8 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
     }
     
     // Identify all dependencies that could be in the template
-    const allPossibleDeps = new Set();
-    const allPossibleDevDeps = new Set();
+    const allPossibleDeps = new Set<string>();
+    const allPossibleDevDeps = new Set<string>();
     
     // Iterate through all layers to find all possible dependencies
     for (const layerKey in templateConfig) {
@@ -219,7 +269,7 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
         continue;
       }
       
-      const layerItems = templateConfig[layerKey];
+      const layerItems = templateConfig[layerKey] as Record<string, TemplateItemConfig>;
       for (const itemId in layerItems) {
         const itemConfig = layerItems[itemId];
         if (itemConfig && itemConfig.dependencies) {
@@ -253,7 +303,7 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
     // Make sure required dependencies have correct versions
     for (const layerKey in userSelections) {
       const selectedItems = userSelections[layerKey] || [];
-      const layerConfig = templateConfig[layerKey];
+      const layerConfig = templateConfig[layerKey] as Record<string, TemplateItemConfig>;
       
       if (!layerConfig) continue;
       
@@ -277,24 +327,39 @@ async function updateDependencies(projectDir, templateConfig, userSelections) {
     console.log(chalk.green('✔ Dependencies updated successfully.'));
 
   } catch (err) {
-    console.warn(chalk.yellow(`Error updating dependencies: ${err.message}`));
+    console.warn(chalk.yellow(`Error updating dependencies: ${(err as Error).message}`));
   }
 }
 
 /**
- * Process Chrome Extension specific configurations.
- * (This function might need adjustments based on how config is structured)
+ * Process Chrome Extension specific configurations
+ * @param projectDir - Project directory path
+ * @param templateConfig - The template configuration
+ * @param userSelections - User selections
+ * @returns Promise<void>
  */
-async function processChromeExtensionConfig(projectDir, templateConfig, userSelections) {
+async function processChromeExtensionConfig(
+  projectDir: string, 
+  templateConfig: TemplateConfig, 
+  userSelections: UserSelections
+): Promise<void> {
   console.log(chalk.gray('Processing Chrome Extension specific configurations (if any)...'));
   // Example: Maybe check for a specific layer like 'chromeSettings' in userSelections
   // Or iterate through all selected items and check for chrome-specific keys
 }
 
 /**
- * Update manifest file (JSON or TS)
+ * Update manifest.json file
+ * @param projectDir - Project directory path
+ * @param keys - Array of manifest keys to update
+ * @param keep - Whether to keep or remove the keys
+ * @returns Promise<void>
  */
-async function updateManifest(projectDir, keys, keep = false) {
+async function updateManifest(
+  projectDir: string, 
+  keys: string[], 
+  keep: boolean = false
+): Promise<void> {
   // Try different manifest filenames
   const manifestPaths = [
     path.join(projectDir, 'manifest.config.ts'),
@@ -364,7 +429,7 @@ async function updateManifest(projectDir, keys, keep = false) {
         console.log(chalk.green(`  ✔ Successfully updated ${path.basename(manifestPath)}`));
         return; // Exit after successfully processing one manifest file
       } catch (err) {
-        console.warn(chalk.yellow(`  ⚠️ Error updating ${manifestPath}: ${err.message}`));
+        console.warn(chalk.yellow(`  ⚠️ Error updating ${manifestPath}: ${(err as Error).message}`));
       }
     }
   }
@@ -372,29 +437,23 @@ async function updateManifest(projectDir, keys, keep = false) {
 }
 
 /**
- * Process code patterns for removal when an item is unselected.
+ * Process a code pattern in a file
+ * @param projectDir - Project directory path
+ * @param pattern - Code pattern to process
+ * @returns Promise<void>
  */
-async function processCodePatterns(projectDir, templateConfig, userSelections) {
-  // This function as originally written processes patterns for UNSELECTED features.
-  // The removal logic is now handled within the main applyTemplateConfig loop.
-  // We might need a different function or logic if we need to ADD code for SELECTED items.
-  // For now, let's assume the main loop handles removal correctly and comment this out or remove.
-  console.log(chalk.gray('Skipping standalone processCodePatterns (logic integrated into main loop).'));
-}
-
-/**
- * Process a single code pattern (likely for removal).
- */
-async function processCodePattern(projectDir, pattern) {
+async function processCodePattern(projectDir: string, pattern: CodePattern): Promise<void> {
   // Support wildcard paths
-  console.log(chalk.gray(`  Processing code pattern: Action='${pattern.action || 'remove'}', Pattern='${pattern.pattern}', Files='${pattern.file}'`));
+  const patternStr = pattern.pattern || pattern.marker;
+  console.log(chalk.gray(`  Processing code pattern: Action='${pattern.action || 'remove'}', Pattern='${patternStr}', Files='${pattern.file}'`));
+
   try {
-    const globby = (await import('globby')).globby;
+    const globby = await import('globby');
     // Log the CWD and pattern being used
     console.log(chalk.gray(`    Globby search CWD: ${projectDir}`));
     console.log(chalk.gray(`    Globby search pattern: ${pattern.file}`));
 
-    const filePaths = await globby(pattern.file, {
+    const filePaths = await globby.globby(pattern.file, {
       cwd: projectDir,
       gitignore: true, // Respect .gitignore
       absolute: false, // Get relative paths from cwd
@@ -411,7 +470,7 @@ async function processCodePattern(projectDir, pattern) {
       if (await fs.pathExists(fullPath)) {
         try {
           let content = await fs.readFile(fullPath, 'utf8');
-          const regex = new RegExp(pattern.pattern, 'g'); // Assume global replacement
+          const regex = new RegExp(patternStr, 'g');
 
           // Current logic only supports removal (implied by action='keep' in the UNSELECTED item)
           // If action is keep, we remove the matched pattern when the feature IS NOT selected.
@@ -428,7 +487,7 @@ async function processCodePattern(projectDir, pattern) {
             console.log(chalk.gray(`    - Action '${pattern.action}' not implemented for code patterns yet, skipping.`));
           }
         } catch (err) {
-          console.warn(chalk.yellow(`    ⚠️ Error processing file ${relativeFilePath}: ${err.message}`));
+          console.warn(chalk.yellow(`    ⚠️ Error processing file ${relativeFilePath}: ${(err as Error).message}`));
         }
       }
     }
@@ -437,12 +496,6 @@ async function processCodePattern(projectDir, pattern) {
     }
 
   } catch (err) {
-    console.warn(chalk.yellow(`  ⚠️ Error during globby search or processing for pattern '${pattern.file}': ${err.message}`));
+    console.warn(chalk.yellow(`  ⚠️ Error during globby search or processing for pattern '${pattern.file}': ${(err as Error).message}`));
   }
-}
-
-// --- Functions for other template types (Vue, React, Node) --- 
-// --- Ensure they are compatible if kept --- 
-async function processVueConfig(projectDir, templateConfig, userSelections) { /* ... */ }
-async function processReactConfig(projectDir, templateConfig, userSelections) { /* ... */ }
-async function processNodeConfig(projectDir, templateConfig, userSelections) { /* ... */ } 
+} 

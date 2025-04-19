@@ -1,0 +1,110 @@
+{
+  "templateName": "Chrome Extension Vue 3 Template",
+  "templateType": "chrome-extension",
+
+  "pages": {
+    "background": {
+      "name": "Background",
+      "description": "Service Worker for background tasks",
+      "files": [ "src/background/**/*" ],
+      "manifestKeys": ["background"],
+      "defaultEnabled": true
+    },
+    "popup": {
+      "name": "Popup",
+      "description": "Browser action popup window",
+      "files": [ "src/ui/action-popup/**/*" ],
+      "manifestKeys": ["action"],
+      "defaultEnabled": true
+    },
+    "options": {
+      "name": "Options Page",
+      "description": "Extension settings page",
+      "files": [ "src/ui/options-page/**/*" ],
+      "manifestKeys": ["options_page"],
+      "defaultEnabled": false
+    },
+    "contentScript": {
+      "name": "Content Script",
+      "description": "Scripts injected into web pages",
+      "files": [ "src/content-script/**/*" ],
+      "manifestKeys": ["content_scripts"],
+      "defaultEnabled": false
+    },
+    "devtoolsPanel": {
+      "name": "Devtools Panel",
+      "description": "Custom panel in Chrome DevTools",
+      "files": [ 
+        "src/ui/devtools-panel/**/*",
+        "src/devtools/**/*" 
+      ],
+      "manifestKeys": ["devtools_page"],
+      "defaultEnabled": false
+    },
+    "sidePanel": {
+      "name": "Side Panel",
+      "description": "Browser side panel UI",
+      "files": [ "src/ui/side-panel/**/*" ],
+      "manifestKeys": ["side_panel"],
+      "defaultEnabled": false
+    }
+  },
+
+  "coreFeatures": {
+    "stateManagement": {
+      "name": "State Management (Pinia)",
+      "description": "Enable Pinia for global state",
+      "files": [ "src/stores/**/*" ],
+      "dependencies": [ { "name": "pinia", "dev": false } ],
+       "codePatterns": [ 
+         { "file": "src/ui/*/main.ts", "pattern": "import .* from 'pinia'", "action": "keep" },
+         { "file": "src/ui/*/main.ts", "pattern": "import .* from '@/stores'", "action": "keep" },
+         { "file": "src/ui/*/main.ts", "pattern": "app\\.use\\(.*pinia.*\\)", "action": "keep"}
+       ],
+      "defaultEnabled": true
+    },
+     "routing": {
+        "name": "File-based Routing",
+        "description": "Automatic Vue Router setup based on file structure",
+        "dependencies": [ { "name": "unplugin-vue-router", "dev": true } ],
+        "codePatterns": [ 
+          { "file": "src/ui/*/main.ts", "pattern": "import .* from '.*vue-router.*'", "action": "keep"} 
+        ],
+        "defaultEnabled": true
+     }
+  },
+
+  "uiEnhancements": {
+    "i18n": {
+      "name": "Internationalization (vue-i18n)",
+      "description": "Support for multiple languages",
+      "files": [ "src/locales/**/*" ],
+      "dependencies": [
+        { "name": "vue-i18n", "dev": false },
+        { "name": "@intlify/unplugin-vue-i18n", "dev": true }
+      ],
+      "codePatterns": [
+         { "file": "src/ui/*/main.ts", "pattern": "import .* from '.*vue-i18n.*'", "action": "keep"},
+         { "file": "src/ui/*/main.ts", "pattern": "import .* from '@/locales'", "action": "keep"},
+         { "file": "src/ui/*/main.ts", "pattern": "app\\.use\\(i18n\\)", "action": "keep"}
+       ],
+      "defaultEnabled": false
+    },
+    "themeSwitcher": {
+      "name": "Theme Switcher",
+      "description": "Component for light/dark mode toggle",
+      "files": [ "src/components/ThemeSwitch.vue" ],
+      "defaultEnabled": true
+    },
+    "notifications": {
+      "name": "Notifications (Notivue)",
+      "description": "Toast notification system",
+       "dependencies": [ { "name": "notivue", "dev": false } ],
+       "codePatterns": [
+         { "file": "src/ui/*/main.ts", "pattern": "import .* from 'notivue'", "action": "keep"},
+         { "file": "src/ui/*/main.ts", "pattern": "app\\.use\\(Notivue\\)", "action": "keep"}
+       ],
+      "defaultEnabled": false
+    }
+  }
+} 
